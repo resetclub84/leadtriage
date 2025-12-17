@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  /* Fonts */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
+
+  /* Base Premium Colors (Dark Mode) */
+  --color-background: #0B0F17;
+  --color-surface: #0F1624;
+  --color-surface-2: #121C2E;
+
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+
+  --color-text: #EAF0FF;
+  --color-muted: rgba(234, 240, 255, 0.72);
+  --color-faint: rgba(234, 240, 255, 0.52);
+
+  --color-primary: #3B82F6;
+  --color-primary-hover: #2563EB;
+
+  --color-accent: #C7A46B;
+
+  --color-danger: #EF4444;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+
+  /* Aliases for Components (Shadcn-like) */
+  --color-foreground: var(--color-text);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-text);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-text);
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: var(--color-surface-2);
+  --color-secondary-foreground: var(--color-text);
+  --color-muted-foreground: var(--color-muted);
+  --color-accent-foreground: #FFFFFF;
+  --color-destructive: var(--color-danger);
+  --color-destructive-foreground: #FFFFFF;
+  --color-ring: var(--color-primary);
+  --color-input: var(--color-border);
+
+  /* Radius */
+  --radius-xl: 12px;
+  --radius-lg: 0.5rem;
+  --radius-md: calc(0.5rem - 2px);
+  --radius-sm: calc(0.5rem - 4px);
+}
+
+/* Base Styles */
+body {
+  @apply bg-background text-text min-h-screen text-base selection:bg-accent/20;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  @apply font-serif tracking-tight font-semibold text-primary;
+}
+
+/* Premium Classes */
+.premium-card {
+  @apply bg-surface border border-border rounded-xl shadow-sm;
+}
+
+.premium-input {
+  @apply h-11 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-muted/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all;
+}
+
+.premium-button {
+  @apply inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-11 px-8;
+}

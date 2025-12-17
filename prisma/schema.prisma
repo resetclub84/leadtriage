@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// 1. Lead Model
+model Lead {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  
+  source    String   
+  name      String?
+  phone     String?
+  email     String?
+  message   String   @db.Text
+  
+  status    String   @default("NEW") 
+  tags      String   // SQLite doesn't support String[], storing as CSV "tag1,tag2"
+  notes     String?  @db.Text
+
+  // V1.1 New Fields
+  lastContactAt   DateTime?
+  nextFollowUpAt  DateTime?
+  
+  assignedToUserId String?
+  assignedTo       User?    @relation(fields: [assignedToUserId], references: [id])
+  
+  triage    TriageResult?
+  events    EventLog[]
+}
+
+// 2. Triage Result Model
+model TriageResult {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  
+  leadId    String   @unique
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  
+  resposta_ao_usuario     String   @db.Text
+  intent                  String 
+  lead_score              String 
+  interesse_principal     String 
+  nivel_urgencia          String 
+  provavel_plano          String 
+  indicacao_programa      String 
+  precisa_humano          Boolean
+  possivel_ticket         String? 
+  probabilidade_fechamento String? 
+  observacoes             String?  @db.Text
+  
+  raw_json                String   @db.Text // SQLite: Stored as JSON string
+}
+
+// 3. Event Log Model (Timeline)
+model EventLog {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id])
+  
+  type      String   // "CREATED", "TRIAGED", "STATUS_CHANGE", "NOTE", "CONTACT_LOGGED"
+  payload   String?  @db.Text // SQLite: Stored as JSON string
+}
+
+// 4. User Model (V1.1)
+model User {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  
+  name      String
+  email     String   @unique
+  password  String   // Simple hash or plain for MVP (will use simple check)
+  role      String   @default("STAFF") // "ADMIN" | "STAFF"
+  
+  leads     Lead[]
+}
+
+// 5. Playbook Model (V1.1)
+model Playbook {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  
+  title         String
+  intent        String // e.g., "AGENDAR_CONSULTA"
+  objectionTag  String? // e.g., "preco_alto"
+  program       String? // e.g., "RESET"
+  templateText  String  @db.Text
+}
