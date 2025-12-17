@@ -12,7 +12,6 @@ export async function POST(req: Request) {
             data: {
                 name,
                 phone,
-                email,
                 tags: "webhook_lead",
                 message,
                 source: source || 'webhook',
