@@ -124,14 +124,87 @@ export default function LeadDetailPage() {
                     </div>
                 )}
 
-                {/* Timeline */}
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="flex items-center gap-2"><History className="w-5 h-5" /> Timeline</CardTitle>
+                {/* Chat Interface */}
+                <Card className="border-primary/20 shadow-lg">
+                    <CardHeader className="bg-surface-2 border-b border-border py-3">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <MessageSquare className="w-5 h-5 text-success" />
+                                WhatsApp
+                            </CardTitle>
+                            <Badge variant="outline" className="text-[10px] tracking-widest text-muted">OFFICIAL API</Badge>
+                        </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
+                        {/* Messages Area */}
+                        <div className="h-[400px] overflow-y-auto p-4 space-y-4 bg-[url('/chat-bg-dark.png')] bg-repeat bg-[length:300px]">
+                            {lead.events
+                                ?.filter((e: any) => ['MESSAGE_RECEIVED', 'MESSAGE_SENT'].includes(e.type))
+                                .length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-muted opacity-50">
+                                    <MessageSquare className="w-12 h-12 mb-2" />
+                                    <p>Nenhuma mensagem ainda.</p>
+                                </div>
+                            ) : (
+                                lead.events
+                                    ?.filter((e: any) => ['MESSAGE_RECEIVED', 'MESSAGE_SENT'].includes(e.type))
+                                    // Sort by date asc for chat flow
+                                    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                                    .map((msg: any) => {
+                                        const isMe = msg.type === 'MESSAGE_SENT';
+                                        return (
+                                            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${isMe
+                                                        ? 'bg-[#005c4b] text-[#e9edef] rounded-tr-none'
+                                                        : 'bg-surface text-text border border-border rounded-tl-none'
+                                                    }`}>
+                                                    <p className="whitespace-pre-wrap">{msg.payload}</p>
+                                                    <div className={`text-[10px] mt-1 text-right opacity-70 ${isMe ? 'text-primary-foreground' : 'text-muted'}`}>
+                                                        {format(new Date(msg.createdAt), 'HH:mm')}
+                                                        {isMe && <span className="ml-1">✓✓</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                            )}
+                        </div>
+
+                        {/* Input Area */}
+                        <div className="p-3 bg-surface border-t border-border flex gap-2">
+                            <div className="relative flex-1">
+                                <input
+                                    type="text"
+                                    placeholder="Digite uma mensagem..."
+                                    className="w-full bg-background border border-border rounded-full py-2 px-4 focus:outline-none focus:border-success text-sm"
+                                    onKeyDown={async (e) => {
+                                        if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                            const val = e.currentTarget.value;
+                                            e.currentTarget.value = ''; // Optimistic clear
+                                            await fetch('/api/whatsapp/send', {
+                                                method: 'POST',
+                                                body: JSON.stringify({ leadId: lead.id, message: val })
+                                            });
+                                            logEvent('MESSAGE_SENT', val); // Optimistic UI update
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <Button size="icon" className="rounded-full bg-success hover:bg-success/90">
+                                <MessageSquare className="w-5 h-5 text-white" />
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Timeline (Original) */}
+                <Card className="opacity-80">
+                    <CardHeader className="flex flex-row items-center justify-between py-4">
+                        <CardTitle className="flex items-center gap-2 text-sm text-muted"><History className="w-4 h-4" /> Histórico Completo</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
                         <div className="space-y-6 relative border-l border-border ml-2 pl-6 py-2">
-                            {lead.events?.map((event: any) => (
+                            {lead.events?.filter(e => !['MESSAGE_RECEIVED', 'MESSAGE_SENT'].includes(e.type)).map((event: any) => (
                                 <div key={event.id} className="relative">
                                     <div className="absolute -left-[31px] top-1 h-3 w-3 rounded-full bg-primary ring-4 ring-surface"></div>
                                     <div className="flex flex-col">
