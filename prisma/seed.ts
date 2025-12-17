@@ -1,9 +1,10 @@
+
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
 async function main() {
-    console.log('Start seeding...')
+    console.log('🌱 Iniciando seed com Playbooks Premium...')
 
     // 1. Create Users
     const admin = await prisma.user.upsert({
@@ -12,7 +13,7 @@ async function main() {
         create: {
             email: 'admin@leadtriage.com',
             name: 'Dr. Admin',
-            password: 'admin', // In production, hash this!
+            password: 'admin',
             role: 'ADMIN',
         },
     })
@@ -28,99 +29,121 @@ async function main() {
         },
     })
 
-    console.log(`Created users: ${admin.name}, ${staff.name}`)
+    console.log(`✅ Usuários: ${admin.name}, ${staff.name}`)
 
-    // 2. Create Playbooks
-    const p1 = await prisma.playbook.create({
-        data: {
-            title: "Agendamento Padrão",
-            intent: "AGENDAR_CONSULTA",
-            program: "RESET",
-            templateText: "Olá! Vi que tem interesse no RESET. Nossa agenda para Dr. Matheus está aberta para próxima semana. Gostaria de verificar disponibilidade na Terça ou Quinta?"
-        }
-    })
+    // 2. Delete existing playbooks to avoid duplicates
+    await prisma.playbook.deleteMany({})
+    console.log('🗑️  Limpando playbooks antigos...')
 
-    const p2 = await prisma.playbook.create({
-        data: {
-            title: "Objeção de Preço",
+    // 3. Create PREMIUM Playbooks (12 templates)
+    const playbooks = [
+        // QUALIFICAÇÃO INICIAL
+        {
+            title: "Boas-vindas (Saudação Genérica)",
+            intent: "MAIS_INFORMACOES",
+            program: null,
+            templateText: "Olá! Bem-vindo à nossa clínica 👋 Estamos aqui para transformar sua saúde de forma sustentável. Me conte: você busca performance esportiva, emagrecimento ou longevidade ativa?"
+        },
+        {
+            title: "Pergunta sobre Preço (Sem Contexto)",
             intent: "MAIS_INFORMACOES",
             objectionTag: "preco",
-            program: "Generic",
-            templateText: "Entendo a questão do investimento. O RESET não é apenas uma dieta, é um acompanhamento médico completo de 5 meses. Se parcelarmos, ficaria confortável para você?"
-        }
-    })
-
-    console.log('Created playbooks')
-
-    // 3. Create Leads
-    const lead1 = await prisma.lead.create({
-        data: {
-            source: 'whatsapp',
-            name: 'Maria Silva',
-            phone: '11999998888',
-            message: 'Gostaria de saber mais sobre o programa de emagrecimento.',
-            status: 'TRIAGING',
-            tags: 'interessado,emagrecimento',
-            assignedTo: { connect: { id: staff.id } },
-            triage: {
-                create: {
-                    resposta_ao_usuario: 'Olá Maria! O programa de emagrecimento foca em reeducação alimentar e acompanhamento médico.',
-                    intent: 'MAIS_INFORMACOES',
-                    lead_score: 'medio',
-                    interesse_principal: 'emagrecimento',
-                    nivel_urgencia: 'moderada',
-                    provavel_plano: '5_meses',
-                    indicacao_programa: 'RESET',
-                    precisa_humano: true,
-                    raw_json: JSON.stringify({})
-                }
-            }
+            program: null,
+            templateText: "Ótima pergunta! Nossos programas variam conforme o protocolo médico (exames, suplementação, acompanhamento). Para te dar um valor exato, preciso entender: qual seu objetivo principal? (emagrecimento/hipertrofia/saúde preventiva)"
         },
-    })
-
-    const lead2 = await prisma.lead.create({
-        data: {
-            source: 'instagram',
-            name: 'João Souza',
-            phone: '11977776666',
-            message: 'Quero agendar uma consulta pro RESET.',
-            status: 'NEW',
-            tags: 'novo,site',
-            assignedTo: { connect: { id: admin.id } },
-            triage: {
-                create: {
-                    resposta_ao_usuario: 'Claro João, vamos agendar. Qual sua disponibilidade?',
-                    intent: 'AGENDAR_CONSULTA',
-                    lead_score: 'alto',
-                    interesse_principal: 'consulta_medica',
-                    nivel_urgencia: 'alta',
-                    provavel_plano: '7_meses',
-                    indicacao_programa: 'RESET',
-                    precisa_humano: true,
-                    raw_json: JSON.stringify({})
-                }
-            }
+        {
+            title: "Interesse em Emagrecimento",
+            intent: "AGENDAR_CONSULTA",
+            program: "Slim 2026",
+            templateText: "Perfeito! O Slim 2026 é nosso protocolo intensivo de 90 dias com abordagem médica 🎯 (nada de dietas restritivas). Você tem algum evento ou meta específica em mente?"
         },
-    })
+        {
+            title: "Interesse em Performance/Hipertrofia",
+            intent: "AGENDAR_CONSULTA",
+            program: "RESET",
+            templateText: "🔥 Excelente! Nosso RESET é focado em otimização hormonal + nutrição estratégica para ganho de massa. Você treina quantas vezes por semana atualmente?"
+        },
 
-    // Create Timeline Events
-    await prisma.eventLog.create({
-        data: {
-            leadId: lead1.id,
-            type: 'CREATED',
-            payload: JSON.stringify({ source: 'whatsapp' })
+        // OBJEÇÕES
+        {
+            title: "Objeção: \"Está Muito Caro\"",
+            intent: "MAIS_INFORMACOES",
+            objectionTag: "preco",
+            program: null,
+            templateText: "Entendo perfeitamente! Vamos olhar por outro ângulo: quanto você já investiu em academias/nutris nos últimos 2 anos sem resultado? Nosso RESET tem taxa de sucesso de 94%. Que tal começar com uma avaliação sem custo?"
+        },
+        {
+            title: "Objeção: \"Vou Pensar\"",
+            intent: "MAIS_INFORMACOES",
+            objectionTag: "decisao",
+            program: null,
+            templateText: "Super válido! Decisão consciente é importante 💭 Enquanto pensa, posso te enviar 2 depoimentos de pacientes que tinham a mesma dúvida? E nossa agenda está 78% cheia este mês - te seguro um horário?"
+        },
+        {
+            title: "Comparação com Concorrente",
+            intent: "MAIS_INFORMACOES",
+            objectionTag: "comparacao",
+            program: null,
+            templateText: "Excelente que está pesquisando! Nossa diferença principal: médico especialista EM MEDICINA DO ESPORTE (não apenas nutricionista), + exames de bioimpedância mensais. Quer ver o comparativo detalhado?"
+        },
+
+        // URGÊNCIA/DOR
+        {
+            title: "Lead Frustrado (\"Já Tentei Tudo\")",
+            intent: "AGENDAR_CONSULTA",
+            program: null,
+            templateText: "Essa frustração é MAIS COMUM do que você imagina. 87% dos nossos pacientes disseram exatamente isso. O problema nunca foi você - foi a abordagem genérica. Medicina integrativa = protocolo 100% individual. Vamos descobrir o QUE trava seu metabolismo?"
+        },
+        {
+            title: "Atleta Buscando Performance",
+            intent: "AGENDAR_CONSULTA",
+            program: "RESET",
+            templateText: "🏆 Perfeito! Trabalhamos com protocolos de VO2max, limiar anaeróbico e suplementação estratégica. Meta típica: ganho de 8-12% em performance em 12 semanas. Você compete ou treina recreativo?"
+        },
+
+        // SOCIAL PROOF
+        {
+            title: "Pedido de Casos de Sucesso",
+            intent: "MAIS_INFORMACOES",
+            program: null,
+            templateText: "Claro! Temos centenas de transformações documentadas. Qual se parece mais com seu caso: (A) Emagrecimento pós-30 anos, (B) Hipertrofia natural, (C) Saúde preventiva/longevidade? Te indico 3 pacientes com perfil similar."
+        },
+        {
+            title: "Dúvida sobre Médico/Especialização",
+            intent: "MAIS_INFORMACOES",
+            program: null,
+            templateText: "Dr. Matheus: Pós-graduação em Medicina Esportiva (USP) + 8 anos em alta performance. Dra. Iris: Nutrologia + Medicina Integrativa. Ambos atendem presencial. Prefere qual abordagem?"
+        },
+
+        // REENGAJAMENTO (Automação Futura)
+        {
+            title: "Follow-up 24h (Sem Resposta)",
+            intent: "MAIS_INFORMACOES",
+            program: null,
+            templateText: "Oi! Vi que você perguntou sobre nossos programas ontem. Ficou alguma dúvida? Ou prefere que eu te envie um vídeo de 2min explicando como funciona na prática?"
+        },
+        {
+            title: "Follow-up 7 Dias (Lead Frio)",
+            intent: "AGENDAR_CONSULTA",
+            program: null,
+            templateText: "Semana corrida, né? 😅 Liberamos 3 vagas EXTRAS para este mês (era só para lista VIP, mas... shh 🤫). Última chance de garantir atendimento ainda em Janeiro. Topa?"
         }
-    })
+    ];
 
-    console.log(`Seeding finished.`)
+    for (const pb of playbooks) {
+        await prisma.playbook.create({ data: pb });
+        console.log(`📋 Criado: ${pb.title}`);
+    }
+
+    console.log(`\n✅ ${playbooks.length} Playbooks Premium instalados!`);
+    console.log('🎯 Sistema pronto para conversão máxima.');
 }
 
 main()
-    .then(async () => {
-        await prisma.$disconnect()
-    })
-    .catch(async (e) => {
+    .catch((e) => {
         console.error(e)
-        await prisma.$disconnect()
         process.exit(1)
+    })
+    .finally(async () => {
+        await prisma.$disconnect()
     })

@@ -1,5 +1,5 @@
 
-const fetch = require('node-fetch'); // Ensure node-fetch is available or use global fetch in Node 18+
+// Native fetch is used (Node 18+)
 
 // Load env vars manually if dotenv not present
 const fs = require('fs');

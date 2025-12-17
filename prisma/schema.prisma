@@ -40,6 +40,14 @@ model Lead {
   // V1.1 New Fields
   lastContactAt   DateTime?
   nextFollowUpAt  DateTime?
+  scheduledMessages ScheduledMessage[]
+  
+  // Patient Registry (Sprint 2)
+  patient    Patient?
+  
+  // Multi-Tenancy (Sprint 4)
+  clinicId  String?
+  clinic    Clinic?  @relation(fields: [clinicId], references: [id])
   
   assignedToUserId String?
   assignedTo       User?    @relation(fields: [assignedToUserId], references: [id])
@@ -80,7 +88,33 @@ model EventLog {
   payload   String?  @db.Text // SQLite: Stored as JSON string
 }
 
-// 4. User Model (V1.1)
+// 4. Clinic Model (Multi-Tenancy - Sprint 4)
+model Clinic {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  name        String
+  slug        String   @unique  // URL: app.leadtriage.com/clinica-reset
+  
+  // Subscription
+  plan        String   @default("TRIAL") // TRIAL, STARTER, PRO, ENTERPRISE
+  trialEndsAt DateTime?
+  stripeCustomerId String?
+  stripeSubscriptionId String?
+  
+  // Configurações
+  isActive    Boolean  @default(true)
+  
+  // Relacionamentos
+  users       User[]
+  leads       Lead[]
+  patients    Patient[]
+  playbooks   Playbook[]
+  config      ClinicConfig?
+}
+
+// 5. User Model (V1.1)
 model User {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
@@ -88,12 +122,16 @@ model User {
   name      String
   email     String   @unique
   password  String   // Simple hash or plain for MVP (will use simple check)
-  role      String   @default("STAFF") // "ADMIN" | "STAFF"
+  role      String   @default("STAFF") // "ADMIN" | "STAFF" | "OWNER"
+  
+  // Multi-Tenancy
+  clinicId  String?
+  clinic    Clinic?  @relation(fields: [clinicId], references: [id])
   
   leads     Lead[]
 }
 
-// 5. Playbook Model (V1.1)
+// 6. Playbook Model (V1.1)
 model Playbook {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
@@ -103,4 +141,277 @@ model Playbook {
   objectionTag  String? // e.g., "preco_alto"
   program       String? // e.g., "RESET"
   templateText  String  @db.Text
+  
+  // Multi-Tenancy (Sprint 4)
+  clinicId  String?
+  clinic    Clinic?  @relation(fields: [clinicId], references: [id])
+}
+
+// 7. SaaS Configuration (Linked to Clinic)
+model ClinicConfig {
+  id        String   @id @default(uuid())
+  updatedAt DateTime @updatedAt
+  
+  // The "Brain"
+  systemPrompt  String  @db.Text // The Personality (Sales Expert)
+  knowledgeBase String  @db.Text // The RAG Content (Prices, Programs)
+  
+  // Multi-Tenancy (Sprint 4) - Optional for backwards compatibility
+  clinicId  String?  @unique
+  clinic    Clinic?  @relation(fields: [clinicId], references: [id])
+}
+
+// 7. Automated Follow-up System
+model ScheduledMessage {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  scheduledFor DateTime // When to send
+  message      String   @db.Text
+  
+  sent      Boolean  @default(false)
+  sentAt    DateTime?
+  
+  cancelled Boolean  @default(false)
+  cancelledReason String? // "lead_responded" | "lead_converted" | "manual"
+}
+
+// 9. Patient Registry (Sprint 2) + ResultOS (Sprint 6) + Onboarding Premium (Sprint 12)
+model Patient {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Dados Pessoais
+  name        String
+  phone       String   @unique
+  email       String?
+  cpf         String?  
+  birthDate   DateTime?
+  
+  // Onboarding Premium (Sprint 12)
+  gender          String?  // "male" | "female" | "other"
+  height          Float?   // Altura em cm
+  fitnessLevel    String?  // "beginner" | "intermediate" | "advanced"
+  trainingGoals   String?  // JSON array: ["weight_loss", "muscle_gain", etc]
+  nutritionGoals  String?  // "lose_weight" | "gain_weight" | "maintain" | "exploring"
+  onboardingCompleted Boolean @default(false)
+  accessCode      String?  @unique  // Código para acesso do portal do paciente
+  protocol        String?  @db.Text // Protocolo gerado por IA (Sprint 16)
+  subscriptionPlan String  @default("FREE") // "FREE" | "PRO" | "PREMIUM" (Sprint 21)
+  
+  // Endereço
+  address     String?
+  city        String?
+  state       String?
+  
+  // Notas Médicas
+  notes       String?  @db.Text
+  
+  // Status
+  status      String   @default("ATIVO") // "ATIVO" | "INATIVO" | "ALTA"
+  
+  // Relacionamento com Lead (opcional - pode criar paciente direto)
+  leadId      String?  @unique
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+  
+  // Multi-Tenancy (Sprint 4)
+  clinicId    String?
+  clinic      Clinic?  @relation(fields: [clinicId], references: [id])
+  
+  // Consultas
+  appointments Appointment[]
+  
+  // ResultOS - Journey Tracker (Sprint 6)
+  checkins    PatientCheckin[]
+  photos      PatientPhoto[]
+  milestones  PatientMilestone[]
+  
+  // ResultOS - Referral Engine (Sprint 8)
+  referralCode    String?   @unique  // Código único para indicações
+  referredBy      Patient?  @relation("PatientReferrals", fields: [referredById], references: [id])
+  referredById    String?
+  referrals       Patient[] @relation("PatientReferrals")
+  referralsSent   Referral[] @relation("ReferralFrom")
+  
+  // ResultOS - Métricas Iniciais (Baseline)
+  initialWeight     Float?   // Peso inicial (kg)
+  initialBodyFat    Float?   // % gordura corporal inicial
+  goalWeight        Float?   // Meta de peso
+  programStartDate  DateTime? // Início do programa
+  programEndDate    DateTime? // Previsão de término
+  
+  // Sistema XP (Sprint 13)
+  xp              PatientXP?
+}
+
+// ============================================
+// RESULTOS - SISTEMA XP/GAMIFICAÇÃO (Sprint 13)
+// ============================================
+
+model PatientXP {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  patientId String   @unique
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  totalXP   Int      @default(0)
+  level     String   @default("bronze") // "bronze" | "silver" | "gold" | "platinum"
+  
+  transactions XPTransaction[]
+}
+
+model XPTransaction {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  
+  xpId      String
+  xp        PatientXP @relation(fields: [xpId], references: [id], onDelete: Cascade)
+  
+  amount    Int
+  reason    String   // "checkin" | "milestone" | "referral" | "photo" | "bonus"
+  metadata  String?  // JSON com detalhes
+}
+
+
+// 10. Appointment Model (Consultas)
+model Appointment {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  date        DateTime
+  type        String   @default("CONSULTA") // "CONSULTA" | "RETORNO" | "AVALIACAO"
+  status      String   @default("AGENDADO") // "AGENDADO" | "REALIZADO" | "CANCELADO" | "FALTOU" | "AGUARDANDO_APROVACAO"
+  notes       String?  @db.Text
+  
+  // Protocolo gerado pela IA (Sprint 3)
+  protocol    String?  @db.Text
+}
+
+// ============================================
+// RESULTOS - PATIENT JOURNEY TRACKER (Sprint 6)
+// ============================================
+
+// 11. Patient Check-in (Acompanhamento periódico)
+model PatientCheckin {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  // Métricas físicas
+  weight      Float?   // Peso atual (kg)
+  bodyFat     Float?   // % gordura corporal
+  waist       Float?   // Cintura (cm)
+  hip         Float?   // Quadril (cm)
+  
+  // Métricas subjetivas (1-10)
+  energyLevel     Int?   // Nível de energia
+  sleepQuality    Int?   // Qualidade do sono
+  moodScore       Int?   // Humor
+  adherenceScore  Int?   // Aderência ao plano
+  
+  // Reflexão
+  wins        String?  @db.Text  // Vitórias da semana
+  challenges  String?  @db.Text  // Desafios enfrentados
+  notes       String?  @db.Text  // Observações gerais
+  
+  // Fonte do check-in
+  source      String   @default("WEB") // "WEB" | "WHATSAPP" | "APP"
+}
+
+// 12. Patient Photos (Antes/Depois)
+model PatientPhoto {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  // Arquivo
+  url         String   // URL da imagem (Supabase Storage)
+  type        String   @default("PROGRESS") // "BEFORE" | "PROGRESS" | "AFTER"
+  angle       String?  // "FRONT" | "SIDE" | "BACK"
+  
+  // Metadados
+  weight      Float?   // Peso no momento da foto
+  weekNumber  Int?     // Semana do programa
+  
+  // Consentimento
+  canShare    Boolean  @default(false)  // Pode usar para marketing?
+  isPublic    Boolean  @default(false)  // Visível no portfólio?
+}
+
+// 13. Patient Milestones (Conquistas/Marcos)
+model PatientMilestone {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  achievedAt  DateTime @default(now())
+  
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  // Tipo de marco
+  type        String   // "WEIGHT_LOSS" | "BODY_FAT" | "CONSISTENCY" | "CUSTOM"
+  title       String   // "Perdeu 5kg!" | "30 dias de aderência"
+  description String?  @db.Text
+  
+  // Valor associado
+  value       Float?   // Ex: 5 (kg perdidos)
+  
+  // Badge/Celebração
+  badgeIcon   String?  // Emoji ou ícone
+  celebrated  Boolean  @default(false)  // Já foi celebrado?
+  
+  // Testemunho
+  testimonial       String?  @db.Text  // Depoimento do paciente
+  testimonialAskedAt DateTime?         // Quando pedimos
+  testimonialGivenAt DateTime?         // Quando respondeu
+  canShareTestimonial Boolean @default(false)
+}
+
+// ============================================
+// RESULTOS - REFERRAL ENGINE (Sprint 8)
+// ============================================
+
+// 14. Referral (Sistema de Indicações)
+model Referral {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  
+  // Quem indicou
+  referrerId  String
+  referrer    Patient  @relation("ReferralFrom", fields: [referrerId], references: [id], onDelete: Cascade)
+  
+  // Indicado
+  referredName    String
+  referredPhone   String
+  referredEmail   String?
+  
+  // Status do funil
+  status      String   @default("INVITED") // "INVITED" | "CLICKED" | "LEAD" | "SCHEDULED" | "CONVERTED"
+  
+  // Tracking
+  invitedAt   DateTime @default(now())
+  clickedAt   DateTime?
+  convertedAt DateTime?
+  
+  // Recompensa
+  rewardGiven Boolean  @default(false)
+  rewardType  String?  // "DISCOUNT" | "GIFT" | "EXTENSION"
+  rewardValue String?  // "10%" | "Kit Especial" | "1 mês grátis"
+  
+  // Atribuição
+  leadId      String?  // Se virou lead, qual o ID
+  patientId   String?  // Se virou paciente, qual o ID
 }

@@ -1,6 +1,6 @@
 
 // Helper to simulate a WhatsApp webhook hit locally
-const fetch = require('node-fetch'); // Needs node-fetch installed or use global fetch in Node 18+
+// Uses native fetch (Node 18+)
 
 async function main() {
     console.log('📨 Simulando mensagem recebida do WhatsApp...');

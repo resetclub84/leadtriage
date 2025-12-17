@@ -56,16 +56,36 @@ export async function POST(req: Request) {
         // 4. Update Status & Log
         await prisma.lead.update({
             where: { id: lead.id },
-            data: { status: 'NEW' } // Back to new with triage info ready
+            data: { status: 'NEW' }
         });
+
+        // --- AUTOPILOT: SEND WHATSAPP REPLY ---
+        console.log("🤖 Autopilot Triggered: Sending reply...");
+        const { sendWhatsAppMessage } = require('@/lib/whatsapp');
+
+        let sentStatus = 'FAILED';
+        if (phone && triageResult.resposta_ao_usuario) {
+            const result = await sendWhatsAppMessage(phone, triageResult.resposta_ao_usuario);
+            if (result) sentStatus = 'SENT';
+        }
+        // ---------------------------------------
 
         await prisma.eventLog.create({
             data: {
                 leadId: lead.id,
-                type: 'TRIAGE_COMPLETED',
-                payload: triageResult
+                type: 'AUTOREPLY_SENT',
+                payload: JSON.stringify({
+                    message: triageResult.resposta_ao_usuario,
+                    status: sentStatus
+                })
             }
         });
+
+        // Schedule automatic follow-ups (24h, 7d, 30d)
+        const { scheduleFollowUps } = require('@/lib/followups');
+        await scheduleFollowUps(lead.id);
+        console.log('📅 Follow-ups scheduled');
+        // ---------------------------------------
 
         // 5. N8N Webhook (Optional)
         const n8nUrl = process.env.N8N_WEBHOOK_URL;
