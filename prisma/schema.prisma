@@ -35,7 +35,6 @@ model Lead {
 
   triage     TriageResult?
   events     EventLog[]
-  messages   Message[]
   payments   Payment[]
 
   // V1.1 New Fields
@@ -44,9 +43,6 @@ model Lead {
   
   assignedToUserId String?
   assignedTo       User?    @relation(fields: [assignedToUserId], references: [id])
-  
-  triage    TriageResult?
-  events    EventLog[]
 }
 
 // 2. Triage Result Model

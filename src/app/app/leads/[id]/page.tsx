@@ -13,6 +13,7 @@ import { ptBR } from 'date-fns/locale';
 
 interface LeadDetail extends Lead {
     events: any[];
+    payments: any[];
     assignedTo?: { id: string, name: string };
 }
 
@@ -155,8 +156,8 @@ export default function LeadDetailPage() {
                                         return (
                                             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                                 <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${isMe
-                                                        ? 'bg-[#005c4b] text-[#e9edef] rounded-tr-none'
-                                                        : 'bg-surface text-text border border-border rounded-tl-none'
+                                                    ? 'bg-[#005c4b] text-[#e9edef] rounded-tr-none'
+                                                    : 'bg-surface text-text border border-border rounded-tl-none'
                                                     }`}>
                                                     <p className="whitespace-pre-wrap">{msg.payload}</p>
                                                     <div className={`text-[10px] mt-1 text-right opacity-70 ${isMe ? 'text-primary-foreground' : 'text-muted'}`}>
@@ -294,6 +295,47 @@ export default function LeadDetailPage() {
                         ) : (
                             <div className="text-sm text-muted italic p-4 text-center bg-surface-2 rounded-lg border border-border">
                                 Nenhum playbook específico para este lead.
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                {/* Payment Card */}
+                <Card className="border-border">
+                    <CardHeader>
+                        <CardTitle className="text-secondary">Pagamentos</CardTitle>
+                        <CardDescription>Cobrar pré-agendamento</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-surface rounded-lg border border-border">
+                            <span className="text-sm font-medium">Status</span>
+                            <Badge variant={lead.payments?.[0]?.status === 'PAID' ? 'success' : 'warning'}>
+                                {lead.payments?.[0]?.status || 'NOT_STARTED'}
+                            </Badge>
+                        </div>
+
+                        {!lead.payments?.length ? (
+                            <Button
+                                className="w-full bg-secondary hover:bg-secondary/90 text-white"
+                                onClick={async () => {
+                                    const res = await fetch('/api/payments/checkout', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ leadId: lead.id })
+                                    });
+                                    const data = await res.json();
+                                    if (data.checkoutUrl) {
+                                        // Open in new tab or copy? Open for now to test
+                                        window.open(data.checkoutUrl, '_blank');
+                                        fetchData(); // Refresh to show pending status
+                                    }
+                                }}
+                            >
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Gerar Link (R$ 100)
+                            </Button>
+                        ) : (
+                            <div className="space-y-2">
+                                <p className="text-xs text-muted text-center">Checkout criado em {format(new Date(lead.payments[0].createdAt), 'dd/MM HH:mm')}</p>
                             </div>
                         )}
                     </CardContent>
