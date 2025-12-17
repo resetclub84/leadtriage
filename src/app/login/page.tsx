@@ -66,6 +66,27 @@ export default function LoginPage() {
                         <CardDescription>Enter your credentials to access the admin panel.</CardDescription>
                     </CardHeader>
                     <CardContent>
+                        <div className="mb-4">
+                            <Button
+                                variant="outline"
+                                className="w-full bg-surface hover:bg-surface-2 border-border text-text flex items-center gap-2"
+                                onClick={() => signIn('google')}
+                                type="button"
+                            >
+                                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                                    <path fill="#EA4335" d="M24 12.276C24 11.42 23.92 10.6 23.776 9.8H12V14.6H18.72C18.432 16.148 17.568 17.476 16.276 18.36V21.48H20.308C22.668 19.308 24 16.108 24 12.276Z" />
+                                    <path fill="#34A853" d="M12 24C15.24 24 17.964 22.924 19.952 21.084L15.92 17.964C14.848 18.68 13.48 19.12 12 19.12C8.88 19.12 6.24 17.02 5.292 14.18H1.216V17.34C3.212 21.304 7.308 24 12 24Z" />
+                                    <path fill="#FBBC05" d="M5.292 14.18C5.052 13.456 4.92 12.74 4.92 12C4.92 11.26 4.788 10.544 5.292 9.82V6.66H1.216C0.44 8.212 0 9.964 0 12C0 14.036 0.44 15.788 1.216 17.34L5.292 14.18Z" />
+                                    <path fill="#4285F4" d="M12 4.88C13.764 4.88 15.348 5.488 16.592 6.676L20.048 3.22C17.96 1.272 15.236 0 12 0C7.308 0 3.212 2.696 1.216 6.66L5.292 9.82C6.24 6.98 8.88 4.88 12 4.88Z" />
+                                </svg>
+                                Continue with Google
+                            </Button>
+                            <div className="relative my-4">
+                                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border"></span></div>
+                                <div className="relative flex justify-center text-xs uppercase"><span className="bg-surface px-2 text-muted">Or continue with</span></div>
+                            </div>
+                        </div>
+
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Email</label>

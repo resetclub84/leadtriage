@@ -9,19 +9,34 @@ datasource db {
 }
 
 // 1. Lead Model
+model Payment {
+  id             String   @id @default(cuid())
+  leadId         String // Relational link to Lead
+  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  status         String   @default("PENDING") // PENDING, PAID, FAILED
+  amount         Int      // In cents (e.g. 10000 = R$ 100,00)
+  provider       String   @default("STRIPE")
+  providerRef    String?  // Stripe PaymentIntent ID
+  metadata       String?  // JSON string for extras
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 model Lead {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  
-  source    String   
-  name      String?
+  id        String   @id @default(cuid())
+  name      String
   phone     String?
-  email     String?
-  message   String   @db.Text
-  
-  status    String   @default("NEW") 
-  tags      String   // SQLite doesn't support String[], storing as CSV "tag1,tag2"
-  notes     String?  @db.Text
+  source    String   @default("MANUAL")
+  message   String?  @db.Text
+  status    String   @default("NEW")
+  tags      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  triage     TriageResult?
+  events     EventLog[]
+  messages   Message[]
+  payments   Payment[]
 
   // V1.1 New Fields
   lastContactAt   DateTime?
