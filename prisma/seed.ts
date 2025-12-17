@@ -58,7 +58,6 @@ async function main() {
             source: 'whatsapp',
             name: 'Maria Silva',
             phone: '11999998888',
-            email: 'maria@email.com',
             message: 'Gostaria de saber mais sobre o programa de emagrecimento.',
             status: 'TRIAGING',
             tags: 'interessado,emagrecimento',
